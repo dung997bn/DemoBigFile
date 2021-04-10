@@ -2,8 +2,22 @@
 @{
     ViewData["Title"] = "ImportBigFile";
 }
+@section Styles{
+    <style>
+        #myProgress {
+            width: 100%;
+            background-color: #ddd;
+        }
 
-<h1>ImportBigFile</h1>
+        #myBar {
+            width: 1%;
+            height: 30px;
+            background-color: #4CAF50;
+        }
+    </style>
+}
+
+<h1>Import Big File</h1>
 
 
 <div id="horizontal-form">
@@ -21,7 +35,18 @@
 <button type="button" id="btnImportExcel" class="btn btn-success">Save</button>
 
 
+<hr />
+<div class="row" id="progress-bar" style="display:none">
+    <h1>Import Progress Bar</h1>
+    <div id="myProgress">
+        <div id="myBar"></div>
+    </div>
+</div>
+
+
 @section Scripts{
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+    <script src="~/js/document.hub.js"></script>
     <script src="~/js/home.js"></script>
     <script>
         var home = new homeController();

@@ -23,7 +23,7 @@
                 processData: false,  // tell jQuery not to process the data
                 contentType: false,  // tell jQuery not to set contentType
                 success: function (data) {
-                    alert('Upload file succesful!', 'success');
+                  
                 }
             });
             return false;

@@ -1,4 +1,5 @@
 using DemoBigFile.Core;
+using DemoBigFile.Hubs;
 using DemoBigFile.Repository;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -29,8 +30,9 @@ namespace DemoBigFile
             services.AddControllersWithViews();
             services.Configure<CommonConstants>(Configuration.GetSection("ConnectionStrings"));
             services.AddTransient<IDbConnectionFactory, DbConnectionFactory>();
-
             services.AddTransient<IRepository, Repo>();
+
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -58,6 +60,8 @@ namespace DemoBigFile
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+                endpoints.MapHub<DocumentHub>("/documentHub");
             });
         }
     }
