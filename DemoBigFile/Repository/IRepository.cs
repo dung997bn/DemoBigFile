@@ -9,5 +9,6 @@ namespace DemoBigFile.Repository
     public interface IRepository
     {
         void Create(DonationViewModel model);
+        void MergeTable();
     }
 }

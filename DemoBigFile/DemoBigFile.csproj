@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\uploaded\" />
+    <Folder Include="wwwroot\uploaded\excels\" />
   </ItemGroup>
 
 </Project>

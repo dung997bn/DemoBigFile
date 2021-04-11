@@ -49,5 +49,20 @@ namespace DemoBigFile.Repository
             }
 
         }
+
+        public void MergeTable()
+        {
+            try
+            {
+                using (var conn = _dbConnection.CreateConnection())
+                {
+                    var res = conn.Execute("MergeTableDonation", commandType: System.Data.CommandType.StoredProcedure);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
     }
 }

@@ -10,6 +10,8 @@ using Microsoft.Extensions.Options;
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -114,6 +116,110 @@ namespace DemoBigFile.Controllers
                 return new OkObjectResult(filePath);
             }
             return new NoContentResult();
+        }
+
+
+        [HttpPost]
+        [DisableRequestSizeLimit]
+        public async Task<IActionResult> ImportBulkCopy(IList<IFormFile> files)
+        {
+            if (files != null && files.Count > 0)
+            {
+                try
+                {
+                    var file = files[0];
+                    var filename = ContentDispositionHeaderValue
+                                       .Parse(file.ContentDisposition)
+                                       .FileName
+                                       .Trim('"');
+
+                    string folder = _hostingEnvironment.WebRootPath + $@"\uploaded\excels";
+                    if (!Directory.Exists(folder))
+                    {
+                        Directory.CreateDirectory(folder);
+                    }
+                    string filePath = Path.Combine(folder, filename);
+
+                    using (FileStream fs = System.IO.File.Create(filePath))
+                    {
+                        file.CopyTo(fs);
+                        fs.Flush();
+                    }
+
+                    //Import
+                    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                    using (var package = new ExcelPackage(new FileInfo(filePath)))
+                    {
+                        ExcelWorksheet workSheet = package.Workbook.Worksheets[0];
+                        await _hubContext.Clients.All.SendAsync("StartBulkCopy");
+                        bool hasHeader = true;
+                        DataTable tbl = new DataTable();
+                        foreach (var firstRowCell in workSheet.Cells[1, 1, 1, workSheet.Dimension.End.Column])
+                        {
+                            tbl.Columns.Add(hasHeader ? firstRowCell.Text : string.Format("Column {0}", firstRowCell.Start.Column));
+                        }
+                        var startRow = hasHeader ? 2 : 1;
+                        for (int rowNum = startRow; rowNum <= workSheet.Dimension.End.Row; rowNum++)
+                        {
+                            var wsRow = workSheet.Cells[rowNum, 1, rowNum, workSheet.Dimension.End.Column];
+                            DataRow row = tbl.Rows.Add();
+                            foreach (var cell in wsRow)
+                            {
+                                row[cell.Start.Column - 1] = cell.Text;
+                            }
+                        }
+
+                        await _hubContext.Clients.All.SendAsync("CompleteConvertToDataTable");
+                        string conStr = _constants.ConnectionStr;
+                        using (SqlConnection sqlConn = new SqlConnection(conStr))
+                        {
+                            sqlConn.Open();
+                            using (SqlBulkCopy sqlbc = new SqlBulkCopy(sqlConn))
+                            {
+                                //donation
+                                sqlbc.DestinationTableName = "donation_1";
+                                sqlbc.ColumnMappings.Add("id", "id");
+                                sqlbc.ColumnMappings.Add("parent_id", "parent_id");
+                                sqlbc.ColumnMappings.Add("elec_code", "elec_code");
+                                sqlbc.ColumnMappings.Add("senator_id", "senator_id");
+                                sqlbc.ColumnMappings.Add("amount", "amount");
+                                sqlbc.ColumnMappings.Add("representative_name", "representative_name");
+                                sqlbc.ColumnMappings.Add("postal_code", "postal_code");
+                                sqlbc.ColumnMappings.Add("address", "address");
+                                sqlbc.ColumnMappings.Add("occupation_id", "occupation_id");
+                                sqlbc.ColumnMappings.Add("receipt_no", "receipt_no");
+
+                                //history
+                                //sqlbc.DestinationTableName = "history";
+                                //sqlbc.ColumnMappings.Add("id", "id");
+                                //sqlbc.ColumnMappings.Add("donation_id", "donation_id");
+                                //sqlbc.ColumnMappings.Add("modified_datetime", "modified_datetime");
+                                //sqlbc.ColumnMappings.Add("modified_person", "modified_person");
+                                //sqlbc.ColumnMappings.Add("change_process", "change_process");
+                                //sqlbc.ColumnMappings.Add("content_change", "content_change");
+                                //sqlbc.ColumnMappings.Add("send_from_process", "send_from_process");
+                                //sqlbc.BulkCopyTimeout = 0;
+                                //sqlbc.BatchSize = 100;
+                                sqlbc.WriteToServer(tbl);
+
+                                await _hubContext.Clients.All.SendAsync("CompleteWriteToServer");
+
+                                _repository.MergeTable();
+
+                                await _hubContext.Clients.All.SendAsync("CompleteImport");
+                            }
+                        }
+                        return new NoContentResult();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                    return new BadRequestResult();
+                }
+            }
+            return new BadRequestResult();
         }
     }
 }

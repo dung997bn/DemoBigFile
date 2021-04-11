@@ -26,3 +26,29 @@ connection.on("UpdateProgress", function (rowCount, current) {
     console.log(pecent)
     myBar.style.width = pecent + "%";
 });
+
+
+connection.on("StartBulkCopy", function () {
+    var progressBar = document.getElementById("progress-bar-bulk-copy")
+    progressBar.style.display = "block"
+
+    var headerText = document.getElementById("status-bulk-copy");
+    headerText.innerText = "Starting Bulk Copy"
+
+});
+
+connection.on("CompleteConvertToDataTable", function () {
+    var headerText = document.getElementById("status-bulk-copy");
+    headerText.innerText = "Completed Convert To DataTable"
+});
+
+connection.on("CompleteWriteToServer", function () {
+    var headerText = document.getElementById("status-bulk-copy");
+    headerText.innerText = "Completed Write To Server (Donation Master)"
+});
+
+
+connection.on("CompleteImport", function () {
+    var headerText = document.getElementById("status-bulk-copy");
+    headerText.innerText = "Completed Import Data!"
+});
