@@ -1,5 +1,7 @@
-﻿using DemoBigFile.Hubs;
+﻿using DemoBigFile.Extensions;
+using DemoBigFile.Hubs;
 using DemoBigFile.Models;
+using DemoBigFile.Models.RelationalModels;
 using DemoBigFile.Repository;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -28,6 +30,7 @@ namespace DemoBigFile.Controllers
         private readonly IRepository _repository;
         private readonly IHubContext<DocumentHub> _hubContext;
 
+
         public HomeController(ILogger<HomeController> logger, IWebHostEnvironment hostingEnvironment,
             IOptions<CommonConstants> constants, IRepository repository, IHubContext<DocumentHub> hubContext)
         {
@@ -36,6 +39,7 @@ namespace DemoBigFile.Controllers
             _constants = constants.Value;
             _repository = repository;
             _hubContext = hubContext;
+
         }
 
         public IActionResult Index()
@@ -76,9 +80,10 @@ namespace DemoBigFile.Controllers
 
                 //Import
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
+                var watch = new System.Diagnostics.Stopwatch();
                 using (var package = new ExcelPackage(new FileInfo(filePath)))
                 {
+                    watch.Start();
                     ExcelWorksheet workSheet = package.Workbook.Worksheets[0];
                     DonationViewModel donation;
                     await _hubContext.Clients.All.SendAsync("ShowProgress", workSheet.Dimension.End.Row);
@@ -112,12 +117,13 @@ namespace DemoBigFile.Controllers
 
                         await _hubContext.Clients.All.SendAsync("UpdateProgress", workSheet.Dimension.End.Row, i);
                     }
+                    watch.Stop();
+                    Console.WriteLine($"Execution Time: {watch.ElapsedMilliseconds} ms");
                 }
                 return new OkObjectResult(filePath);
             }
             return new NoContentResult();
         }
-
 
         [HttpPost]
         [DisableRequestSizeLimit]
@@ -148,9 +154,10 @@ namespace DemoBigFile.Controllers
 
                     //Import
                     ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
+                    var watch = new System.Diagnostics.Stopwatch();
                     using (var package = new ExcelPackage(new FileInfo(filePath)))
                     {
+                        watch.Start();
                         ExcelWorksheet workSheet = package.Workbook.Worksheets[0];
                         await _hubContext.Clients.All.SendAsync("StartBulkCopy");
                         bool hasHeader = true;
@@ -209,6 +216,8 @@ namespace DemoBigFile.Controllers
 
                                 await _hubContext.Clients.All.SendAsync("CompleteImport");
                             }
+                            watch.Stop();
+                            Console.WriteLine($"Execution Time: {watch.ElapsedMilliseconds} ms");
                         }
                         return new NoContentResult();
                     }
@@ -216,10 +225,53 @@ namespace DemoBigFile.Controllers
                 catch (Exception ex)
                 {
                     throw ex;
-                    return new BadRequestResult();
                 }
             }
             return new BadRequestResult();
         }
+
+        [HttpPost]
+        public async Task<IActionResult> DemoRelationalDataInsert()
+        {
+            //Init data
+            int stt = 1;
+            List<ProductsEntity> productsList = new List<ProductsEntity>();
+            List<ProductsVariantsEntity> productVariantsList = new List<ProductsVariantsEntity>();
+            while (stt < 1000000)
+            {
+                int index = 1;
+
+                ProductsEntity productData = new ProductsEntity();
+                productData.product_code = $"Product_code aaaaaaaaaaaaaaaaaaaaa dddddddddddddsaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {stt}";
+                productData.product_name = $"Dell Laptop bbbbbbbbbbbbbbbbbbbbbbbbbbbb fewrtreyyyyyyyyyyyyyyyyyyyy   dfsfd{stt}";
+                productData.base_price = stt % 2 == 0 ? 6700 : 7200;
+                productData.reference_id = Guid.NewGuid().ToString();
+
+                productsList.Add(productData);
+
+                while (index < 4)
+                {
+                    var prodVariant = new ProductsVariantsEntity();
+                    prodVariant.variant_name = $"12 GB RAM Variant yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy trrrrrrrrrrrrrrrrrrrrrrrrrrrr  dsfsdfsdfds{index}";
+                    prodVariant.reference_id = productData.reference_id;
+                    productVariantsList.Add(prodVariant);
+                    index++;
+                }
+                stt++;
+            }
+
+            var tableProduct = productsList.ToDataTable(new List<string>());
+            var tableProductVariant = productVariantsList.ToDataTable(new List<string>());
+
+            await _hubContext.Clients.All.SendAsync("StartDemoRelationalDataInsert");
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            await _repository.DemoRelationalDataInsert(tableProduct, tableProductVariant);
+            watch.Stop();
+            Console.WriteLine($"Execution Time: {watch.ElapsedMilliseconds} ms");
+            await _hubContext.Clients.All.SendAsync("CompleteDemoRelationalDataInsert");
+            return new NoContentResult();
+        }
+
     }
 }

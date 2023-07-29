@@ -53,5 +53,23 @@
             });
             return false;
         });
+
+        $('#btnDemoRelationalInsert').on('click', function () {
+
+            $.ajax({
+                url: '/Home/DemoRelationalDataInsert',
+                type: 'POST',
+/*                data: fileData,*/
+                processData: false,  // tell jQuery not to process the data
+                contentType: false,  // tell jQuery not to set contentType
+                success: function (data) {
+
+                }
+            });
+            return false;
+        });
+
+
+
     }
 }

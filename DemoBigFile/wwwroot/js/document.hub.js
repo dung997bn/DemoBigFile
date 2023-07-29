@@ -52,3 +52,15 @@ connection.on("CompleteImport", function () {
     var headerText = document.getElementById("status-bulk-copy");
     headerText.innerText = "Completed Import Data!"
 });
+
+
+connection.on("StartDemoRelationalDataInsert", function () {
+    var headerText = document.getElementById("status-demo-relational");
+    headerText.innerText = "Start Demo Relational Data Insert"
+});
+
+
+connection.on("CompleteDemoRelationalDataInsert", function () {
+    var headerText = document.getElementById("status-demo-relational");
+    headerText.innerText = "Completed Demo Relational Data Insert"
+});
